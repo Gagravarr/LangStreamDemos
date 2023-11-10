@@ -1,0 +1,26 @@
+name: "Embeddings then Similarity processor"
+topics:
+  - name: "input-topic"
+    creation-mode: create-if-not-exists
+  - name: "output-topic"
+    creation-mode: create-if-not-exists
+pipeline:
+  - name: "convert-to-structure"
+    type: "document-to-json"
+    input: "input-topic"
+    configuration:
+      text-field: "question"
+  - name: "compute-embeddings"
+    type: "compute-ai-embeddings"
+    configuration:
+      model: "${secrets.hugging-face.embeddings-model}"
+      model-url: "${secrets.hugging-face.embeddings-model-url}"
+      embeddings-field: "value.embeddings"
+      text: "{{ value.question }}"
+      batch-size: 10
+      flush-interval: 500
+  - name: "python-compute-similarity"
+    type: "python-processor"
+    output: "output-topic"
+    configuration:
+      className: distances.Similarity
