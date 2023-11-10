@@ -20,6 +20,10 @@ what the different models were train on/with.
 Provide `clip.cpp` a set of possible image classifications, in english text,
 and have the probabilities of each returned.
 
+This could be used to send different images down different processing routes
+(eg if there's text do OCR, if there are people check for release forms), or
+could be used for filtering, or many other things.
+
 Tested with the `CLIP-ViT-L-14-laion2B-s32B-b82K_ggml-model-q5_1.gguf` model
 
 This assumes `clip.cpp` was cloned into `/models/clip.cpp`, and you want 
@@ -43,4 +47,39 @@ for i in Pictures/*.jpg; do
     -v 0 --image $i $COPTS
   echo ""
 done
+```
+
+## Demo 2 - Embeddings
+OpenCLIP has an embeddings space that works for both images and text. If
+you generate embeddings for all your images, store those into your
+Vector Database, you can then query for images matching an item or 
+description!
+
+This is a bit like a simple RAG for images + text
+
+As with demo 1, tweak paths/models as needed. You would ideally feed the
+embeddings generated into your Vector Database, eg via LangStream.
+
+```
+#!/bin/bash
+
+CLIP=/models/clip.cpp
+CMODEL=CLIP-ViT-L-14-laion2B-s32B-b82K_ggml-model-q5_1.gguf
+
+pushd /tmp
+for i in ~/Pictures/*; do 
+  echo $i
+  ${CLIP}/build/bin/extract -m ${CLIP}/models/${CMODEL} \
+    -v 0 --image $i
+
+  # Print the numpy embedding vectors
+  EMB="img_vec_"`basename "$i"`".npy"
+  python3 << EOF
+import numpy
+emb = numpy.load("$EMB")
+print(emb)
+EOF
+  echo ""
+done
+popd
 ```
